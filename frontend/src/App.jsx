@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { User, Ticket, CheckCircle, LogIn, UserPlus, LogOut } from 'lucide-react';
+import { User, Ticket, CheckCircle, LogIn, UserPlus, LogOut, Download } from 'lucide-react';
 import { authAPI, voucherAPI } from './api';
-import JsBarcode from 'jsbarcode';
+import QRCode from 'react-qr-code';
+import html2canvas from 'html2canvas';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -20,7 +21,7 @@ const [authData, setAuthData] = useState({
   state: ''
 });
 
-const barcodeRef = useRef(null);
+const voucherCardRef = useRef(null);
 
   // Check if user is already logged in on mount
   useEffect(() => {
@@ -60,25 +61,6 @@ const barcodeRef = useRef(null);
       console.error('Error loading voucher:', err);
     }
   };
-
-  // Generate barcode when voucher code changes
-  useEffect(() => {
-    if (voucher?.code && barcodeRef.current) {
-      try {
-        JsBarcode(barcodeRef.current, voucher.code, {
-          format: "CODE128",
-          width: 2,
-          height: 60,
-          displayValue: true,
-          fontSize: 14,
-          background: "transparent",
-          lineColor: "#000000"
-        });
-      } catch (err) {
-        console.error('Barcode generation error:', err);
-      }
-    }
-  }, [voucher?.code, voucher?.isUsed]);
 
   const handleAuth = async (type) => {
     if (type === 'register') {
@@ -136,6 +118,32 @@ const barcodeRef = useRef(null);
     }
   };
 
+  const downloadVoucher = async () => {
+    if (!voucherCardRef.current || !voucher?.code) return;
+    
+    try {
+      setLoading(true);
+      const canvas = await html2canvas(voucherCardRef.current, {
+        backgroundColor: null,
+        scale: 2, // Higher quality
+      });
+      
+      // Convert canvas to image
+      const imageUrl = canvas.toDataURL('image/png');
+      
+      // Create download link
+      const link = document.createElement('a');
+      link.download = `voucher-${voucher.code}.png`;
+      link.href = imageUrl;
+      link.click();
+    } catch (err) {
+      console.error('Error downloading voucher:', err);
+      setError('Failed to download voucher');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const logout = async () => {
     try {
       await authAPI.logout();
@@ -173,7 +181,10 @@ const barcodeRef = useRef(null);
             </button>
           </div>
 
-          <div className={`relative overflow-hidden rounded-xl border-2 transition-all duration-500 ${voucher?.isUsed ? 'bg-gray-50 border-gray-200' : 'bg-indigo-600 border-indigo-600 shadow-lg shadow-indigo-100'}`}>
+          <div 
+            ref={voucherCardRef}
+            className={`relative overflow-hidden rounded-xl border-2 transition-all duration-500 ${voucher?.isUsed ? 'bg-gray-50 border-gray-200' : 'bg-indigo-600 border-indigo-600 shadow-lg shadow-indigo-100'}`}
+          >
             {/* Background Decoration */}
             <div className="absolute top-0 right-0 p-4 opacity-10">
               <Ticket size={80} color="white" />
@@ -214,13 +225,17 @@ const barcodeRef = useRef(null);
                   </button>
                 </div>
 
-                {/* Barcode Display */}
+                {/* QR Code Display */}
                 {voucher?.code && (
                   <div className={`flex justify-center ${voucher?.isUsed ? 'opacity-50' : ''}`}>
-                    <canvas 
-                      ref={barcodeRef}
-                      className="bg-white rounded p-2"
-                    />
+                    <div className="bg-white rounded p-4">
+                      <QRCode
+                        value={voucher.code}
+                        size={200}
+                        style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                        viewBox={`0 0 200 200`}
+                      />
+                    </div>
                   </div>
                 )}
               </div>
@@ -230,6 +245,20 @@ const barcodeRef = useRef(null);
           {error && (
             <div className="mt-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
               {error}
+            </div>
+          )}
+
+          {/* Download Button */}
+          {voucher?.code && (
+            <div className="mt-4 flex justify-center">
+              <button 
+                onClick={downloadVoucher}
+                disabled={loading}
+                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold text-sm flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Download size={18} />
+                {loading ? 'Processing...' : 'Download Voucher'}
+              </button>
             </div>
           )}
 

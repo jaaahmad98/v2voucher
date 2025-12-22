@@ -29,7 +29,9 @@ def create_user_profile(sender, instance, created, **kwargs):
         UserProfile.objects.create(user=instance, email=instance.email)
 
 # Signal to create Voucher when User is created
-@receiver(post_save, sender=User)
-def create_welcome_voucher(sender, instance, created, **kwargs):
-    if created:
-        Voucher.objects.create(user=instance)
+# NOTE: Voucher creation is now handled in UserRegistrationSerializer.create()
+# to ensure codes from Excel file are used and no duplicates occur
+# @receiver(post_save, sender=User)
+# def create_welcome_voucher(sender, instance, created, **kwargs):
+#     if created:
+#         Voucher.objects.create(user=instance)

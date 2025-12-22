@@ -1,7 +1,8 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
-from .models import UserProfile
+from .models import UserProfile, Voucher
+from .utils import get_available_voucher_code
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=6)
@@ -22,6 +23,15 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
+        # Check if voucher code is available BEFORE creating user
+        try:
+            voucher_code = get_available_voucher_code()
+        except ValueError as e:
+            # Raise validation error if no codes available
+            raise serializers.ValidationError({"error": str(e)})
+        except Exception as e:
+            raise serializers.ValidationError({"error": f"Failed to get voucher code: {str(e)}"})
+        
         phone_number = validated_data.pop('phone_number')
         state = validated_data.pop('state')
         email = validated_data.pop('email', '')
@@ -32,6 +42,9 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             password=validated_data['password'],
             email=email
         )
+        
+        # Create voucher with the code from Excel
+        Voucher.objects.create(user=user, code=voucher_code)
         
         # Update UserProfile with email, phone_number and state
         user_profile = user.userprofile
