@@ -45,10 +45,17 @@ async function apiRequest(endpoint, options = {}) {
 
 // Authentication API
 export const authAPI = {
-  register: async (username, password, email = '') => {
+  register: async (username, password, email, phone_number, state) => {
     return apiRequest('/auth/register/', {
       method: 'POST',
-      body: JSON.stringify({ username, password, password_confirm: password, email }),
+      body: JSON.stringify({ 
+        username, 
+        password, 
+        password_confirm: password, 
+        email,
+        phone_number,
+        state
+      }),
     });
   },
 

@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { User, Ticket, CheckCircle, LogIn, UserPlus, LogOut } from 'lucide-react';
 import { authAPI, voucherAPI } from './api';
+import JsBarcode from 'jsbarcode';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -10,8 +11,16 @@ export default function App() {
   const [error, setError] = useState(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
-  // Form States
-  const [authData, setAuthData] = useState({ username: '', password: '' });
+ // Form States
+const [authData, setAuthData] = useState({ 
+  username: '', 
+  password: '', 
+  email: '',
+  phone_number: '',
+  state: ''
+});
+
+const barcodeRef = useRef(null);
 
   // Check if user is already logged in on mount
   useEffect(() => {
@@ -52,26 +61,58 @@ export default function App() {
     }
   };
 
-  const handleAuth = async (type) => {
-    if (!authData.username || !authData.password) {
-      setError('Please fill in all fields');
-      return;
+  // Generate barcode when voucher code changes
+  useEffect(() => {
+    if (voucher?.code && barcodeRef.current) {
+      try {
+        JsBarcode(barcodeRef.current, voucher.code, {
+          format: "CODE128",
+          width: 2,
+          height: 60,
+          displayValue: true,
+          fontSize: 14,
+          background: "transparent",
+          lineColor: "#000000"
+        });
+      } catch (err) {
+        console.error('Barcode generation error:', err);
+      }
     }
+  }, [voucher?.code, voucher?.isUsed]);
 
+  const handleAuth = async (type) => {
+    if (type === 'register') {
+      if (!authData.username || !authData.password || !authData.email || !authData.phone_number || !authData.state) {
+        setError('Please fill in all fields');
+        return;
+      }
+    } else {
+      if (!authData.username || !authData.password) {
+        setError('Please fill in all fields');
+        return;
+      }
+    }
+  
     setLoading(true);
     setError(null);
-
+  
     try {
       let userData;
       if (type === 'register') {
-        userData = await authAPI.register(authData.username, authData.password);
+        userData = await authAPI.register(
+          authData.username, 
+          authData.password, 
+          authData.email,
+          authData.phone_number,
+          authData.state
+        );
       } else {
         userData = await authAPI.login(authData.username, authData.password);
       }
-
+  
       setUser(userData.user);
       setView('dashboard');
-      setAuthData({ username: '', password: '' });
+      setAuthData({ username: '', password: '', email: '', phone_number: '', state: '' });
     } catch (err) {
       setError(err.message || 'Authentication failed');
     } finally {
@@ -104,7 +145,7 @@ export default function App() {
       setUser(null);
       setVoucher(null);
       setView('login');
-      setAuthData({ username: '', password: '' });
+      setAuthData({ username: '', password: '', email: '', phone_number: '', state: '' });
       setError(null);
     }
   };
@@ -151,25 +192,37 @@ export default function App() {
                 {voucher?.isUsed && <CheckCircle className="text-green-500" size={32} />}
               </div>
 
-              <div className="mt-6 flex items-center justify-between">
-                <div>
-                  <p className={`text-xs ${voucher?.isUsed ? 'text-gray-400' : 'text-indigo-200'}`}>PROMO CODE</p>
-                  <p className={`font-mono font-bold text-lg ${voucher?.isUsed ? 'text-gray-400 line-through' : 'text-white'}`}>
-                    {voucher?.code || 'Loading...'}
-                  </p>
+              <div className="mt-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className={`text-xs ${voucher?.isUsed ? 'text-gray-400' : 'text-indigo-200'}`}>PROMO CODE</p>
+                    <p className={`font-mono font-bold text-lg ${voucher?.isUsed ? 'text-gray-400 line-through' : 'text-white'}`}>
+                      {voucher?.code || 'Loading...'}
+                    </p>
+                  </div>
+                  
+                  <button 
+                    onClick={useVoucher}
+                    disabled={voucher?.isUsed || loading}
+                    className={`px-6 py-2 rounded-lg font-bold text-sm transition-all ${
+                      voucher?.isUsed 
+                      ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+                      : 'bg-white text-indigo-600 hover:bg-indigo-50 active:scale-95'
+                    }`}
+                  >
+                    {loading ? 'Processing...' : voucher?.isUsed ? 'Claimed' : 'Use Now'}
+                  </button>
                 </div>
-                
-                <button 
-                  onClick={useVoucher}
-                  disabled={voucher?.isUsed || loading}
-                  className={`px-6 py-2 rounded-lg font-bold text-sm transition-all ${
-                    voucher?.isUsed 
-                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
-                    : 'bg-white text-indigo-600 hover:bg-indigo-50 active:scale-95'
-                  }`}
-                >
-                  {loading ? 'Processing...' : voucher?.isUsed ? 'Claimed' : 'Use Now'}
-                </button>
+
+                {/* Barcode Display */}
+                {voucher?.code && (
+                  <div className={`flex justify-center ${voucher?.isUsed ? 'opacity-50' : ''}`}>
+                    <canvas 
+                      ref={barcodeRef}
+                      className="bg-white rounded p-2"
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -234,6 +287,24 @@ export default function App() {
               </div>
             </div>
 
+            {view === 'register' && (
+              <div>
+                <label className="text-xs font-bold text-gray-400 uppercase ml-1">Email</label>
+                <div className="relative mt-1">
+                  <input 
+                    type="email" 
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-4 pr-4 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                    placeholder="Enter email"
+                    value={authData.email}
+                    onChange={(e) => {
+                      setAuthData({...authData, email: e.target.value});
+                      setError(null);
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="text-xs font-bold text-gray-400 uppercase ml-1">Password</label>
               <div className="relative mt-1">
@@ -256,9 +327,50 @@ export default function App() {
               </div>
             </div>
 
+            {view === 'register' && (
+              <>
+                <div>
+                  <label className="text-xs font-bold text-gray-400 uppercase ml-1">Phone Number</label>
+                  <div className="relative mt-1">
+                    <input 
+                      type="tel" 
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-4 pr-4 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                      placeholder="Enter phone number"
+                      value={authData.phone_number}
+                      onChange={(e) => {
+                        setAuthData({...authData, phone_number: e.target.value});
+                        setError(null);
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-gray-400 uppercase ml-1">State</label>
+                  <div className="relative mt-1">
+                    <input 
+                      type="text" 
+                      className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-4 pr-4 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                      placeholder="Enter state"
+                      value={authData.state}
+                      onChange={(e) => {
+                        setAuthData({...authData, state: e.target.value});
+                        setError(null);
+                      }}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+
             <button 
               onClick={() => handleAuth(view)}
-              disabled={!authData.username || !authData.password || loading}
+              disabled={
+                (view === 'register' 
+                  ? (!authData.username || !authData.password || !authData.email || !authData.phone_number || !authData.state)
+                  : (!authData.username || !authData.password)
+                ) || loading
+              }
               className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-100 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {loading ? (
