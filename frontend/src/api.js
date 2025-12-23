@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://voucher.mysa.my/api';
 
 // Helper function to make API requests
 async function apiRequest(endpoint, options = {}) {
@@ -37,7 +37,7 @@ async function apiRequest(endpoint, options = {}) {
   } catch (error) {
     // Handle network errors
     if (error.name === 'TypeError' && error.message.includes('fetch')) {
-      throw new Error('Tidak dapat menyambung ke pelayan. Sila pastikan pelayan Django berjalan di http://localhost:8000');
+      throw new Error('Tidak dapat menyambung ke pelayan. Sila pastikan pelayan API berjalan.');
     }
     throw error;
   }

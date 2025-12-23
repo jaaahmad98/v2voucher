@@ -16,13 +16,14 @@ pip install -r requirements.txt
 ```
 
 2. **Set environment variables:**
-Create a `.env` file in the root directory:
+Create a `.env` file in the root directory (see `env.production` for template):
 ```env
 SECRET_KEY=your-production-secret-key-here
 DEBUG=False
-ALLOWED_HOSTS=yourdomain.com,www.yourdomain.com
-CORS_ALLOWED_ORIGINS=https://yourdomain.com
-CSRF_TRUSTED_ORIGINS=https://yourdomain.com
+ALLOWED_HOSTS=voucher.mysa.my
+CORS_ALLOWED_ORIGINS=https://voucher.mysa.my
+CSRF_TRUSTED_ORIGINS=https://voucher.mysa.my
+SECURE_SSL_REDIRECT=True
 ```
 
 3. **Run migrations:**
@@ -51,7 +52,7 @@ npm install
 2. **Set environment variables:**
 Create a `.env.production` file in the `frontend` directory:
 ```env
-VITE_API_BASE_URL=https://api.yourdomain.com/api
+VITE_API_BASE_URL=https://voucher.mysa.my/api
 ```
 
 3. **Build for production:**

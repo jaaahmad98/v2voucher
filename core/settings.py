@@ -32,10 +32,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-s(rydwujtm=arur-hxp^an!aef=pucu%4soosg*h^#co^yfhja')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',') if os.environ.get('ALLOWED_HOSTS') else []
+ALLOWED_HOSTS = (
+    os.environ.get('ALLOWED_HOSTS', 'voucher.mysa.my').split(',') 
+    if os.environ.get('ALLOWED_HOSTS') 
+    else ['voucher.mysa.my']
+)
 
+# Default primary key field type
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Application definition
 
@@ -87,8 +93,12 @@ WSGI_APPLICATION = 'core.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': os.environ.get('rootv_voucher'),
+        'USER': os.environ.get('rootv_voucher_admin'),
+        'PASSWORD': os.environ.get('{HZmna^P3@Vw:'),
+        'HOST': os.environ.get('103.233.1.85'),
+        'PORT': os.environ.get('3306'),
     }
 }
 
@@ -127,29 +137,36 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# Security settings for production
+if not DEBUG:
+    SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'True') == 'True'
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
 
 # CORS Settings
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:5175",
-    "http://127.0.0.1:5175",
-    "http://localhost:5179",
-    "http://127.0.0.1:5179",
-] + (os.environ.get('CORS_ALLOWED_ORIGINS', '').split(',') if os.environ.get('CORS_ALLOWED_ORIGINS') else [])
+CORS_ALLOWED_ORIGINS = (
+    os.environ.get('CORS_ALLOWED_ORIGINS', 'https://voucher.mysa.my').split(',') 
+    if os.environ.get('CORS_ALLOWED_ORIGINS') 
+    else ['https://voucher.mysa.my']
+)
 
 CORS_ALLOW_CREDENTIALS = True
 
 # CSRF Trusted Origins - required for POST requests from frontend
-CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:5175",
-    "http://127.0.0.1:5175",
-    "http://localhost:5179",
-    "http://127.0.0.1:5179",
-] + (os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',') if os.environ.get('CSRF_TRUSTED_ORIGINS') else [])
+CSRF_TRUSTED_ORIGINS = (
+    os.environ.get('CSRF_TRUSTED_ORIGINS', 'https://voucher.mysa.my').split(',') 
+    if os.environ.get('CSRF_TRUSTED_ORIGINS') 
+    else ['https://voucher.mysa.my']
+)
 
 # For development, you can also allow all origins (not recommended for production)
 # CORS_ALLOW_ALL_ORIGINS = True
